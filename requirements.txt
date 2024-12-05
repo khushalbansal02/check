@@ -7,3 +7,4 @@ langchain-google-genai
 python-dotenv
 google-search-results 
 joblib
+scikit-learn

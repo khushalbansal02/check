@@ -47,7 +47,7 @@ def predict_score():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-@app.route('/store_embeddings', methods=['GET'])
+@app.route('/store_embeddings', methods=['POST'])
 def store_embeddings():
     tags = request.args.get('tags', '').split(',')
 

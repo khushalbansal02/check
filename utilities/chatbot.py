@@ -2,7 +2,7 @@ import os
 from langchain.agents import initialize_agent
 from langchain_community.agent_toolkits.load_tools import load_tools
 from langchain_google_genai import ChatGoogleGenerativeAI
-from qdrant_client import QdrantClient, models
+from qdrant_client import QdrantClient, models # type: ignore
 from dotenv import load_dotenv
 import requests
 import numpy as np

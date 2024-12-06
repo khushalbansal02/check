@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS  
 from utilities.chatbot import get_response  
 from utilities.model import get_prediction_score 
+from utilities.embedding import search_and_store_embeddings
 import os 
 
 app = Flask(__name__)
@@ -45,6 +46,19 @@ def predict_score():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/store_embeddings', methods=['GET'])
+def store_embeddings():
+    tags = request.args.get('tags', '').split(',')
+
+    if not tags :
+        return jsonify({"error": "Tags required"}), 400
+
+    try:
+        message = search_and_store_embeddings(tags)
+        return jsonify({"message": message}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
   app.run(port=5000)

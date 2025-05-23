@@ -4,13 +4,25 @@ import numpy as np
 model = pickle.load(open('models/finalized_model.sav', 'rb'))
 vc = pickle.load(open('models/vectorizer.pkl', 'rb'))
 
-def get_prediction_score(input_text: str) -> float:
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def get_prediction(input_text: str):
     features = vc.transform([input_text])
-    decision_score = model.decision_function(features)
-    min_decision_score = -1.5
-    max_decision_score = 1.5
-    scaled_score = 100 * (decision_score - min_decision_score) / (max_decision_score - min_decision_score)
-    scaled_score_reversed = 100 - scaled_score
-    scaled_score_reversed = np.clip(scaled_score_reversed, 0, 100)
-    return scaled_score_reversed[0]
+    
+    label = model.predict(features)[0]
+    
+    decision_score = model.decision_function(features)[0]
+    
+    probability = sigmoid(decision_score)
+    probabilities = [1 - probability, probability]  
+    label = int(label)
+    if(label==1):
+        label="Likely Fake"
+    else:
+        label="Likely True"
+    probabilities = [float(prob) for prob in probabilities]
+    print(label, probabilities)
+    
+    return label, probabilities
 

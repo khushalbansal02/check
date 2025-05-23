@@ -5,16 +5,20 @@ import requests
 import json
 import urllib.request
 import urllib.parse
+from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 load_dotenv()
 
 QDRANT_API_KEY = os.environ.get('QDRANT_API_KEY')
-HUGGINGFACE_TOKEN = os.environ.get('HUGGINGFACE_TOKEN')
 apikey = os.environ.get('GNEWS_API_KEY')
 
 
+# Load model locally (this will download the model the first time)
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+
 qdrant_client = QdrantClient(
-    url="https://291d16b5-08bb-42a4-830a-d27ecc0a4544.us-west-2-0.aws.cloud.qdrant.io:6333", 
+    url="https://3b5215d5-2312-44fa-92c4-6ced8863758a.us-east4-0.gcp.cloud.qdrant.io:6333", 
     api_key=QDRANT_API_KEY,
 )
 collection_name="check_embeddings"
@@ -22,7 +26,6 @@ collection_name="check_embeddings"
 from qdrant_client.models import VectorParams, Distance
 
 VECTOR_DIM = 384
-
 
 try:
     qdrant_client.get_collection(collection_name=collection_name)
@@ -37,13 +40,10 @@ except Exception as e:
         )
     )
 
-
-API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
-headers = {"Authorization": HUGGINGFACE_TOKEN}
-
 def query(texts):
-    response = requests.post(API_URL, headers=headers, json={"inputs": texts, "options":{"wait_for_model":True}})
-    return response.json()
+    embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+    return embeddings.tolist()
+
 
 def store_embedding(texts, qdrant_client, collection_name=collection_name):
     embedding_response = query(texts)
@@ -67,7 +67,6 @@ def store_embedding(texts, qdrant_client, collection_name=collection_name):
 
 def search_articles(tags, apikey):
     
-    
     query = " ".join(tags)
     encoded_query = urllib.parse.quote(query)
     url = f"https://gnews.io/api/v4/search?q={encoded_query}&lang=en&country=us&sortBy=relevance&max=10&apikey={apikey}"
@@ -87,7 +86,31 @@ def search_and_store_embeddings(tags, apikey=apikey, qdrant_client=qdrant_client
         print(f"Stored {len(titles)} articles in the collection.")
 
     else:
-        print("No articles found.")
+        print("No articles found.")  
+
+
+
+# points, _ = qdrant_client.scroll(
+#     collection_name="check_embeddings",
+#     scroll_filter=None,
+#     limit=100  # Fetch up to 100 points at a time
+# )
+
+# # Check if points are retrieved
+# if not points:
+#     print("No points found in the collection.")
+# else:
+#     for point in points:
+#         print(f"ID: {point.id}, Payload: {point.payload}")
+
+# qdrant_client.delete(
+#     collection_name=collection_name,
+#     # No filter means delete all points
+#     filter=None
+# )
+
+# print(f"All points deleted from collection '{collection_name}'.")
+
 
 
 

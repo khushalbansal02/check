@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS  
 from utilities.chatbot import get_response  
-from utilities.model import get_prediction_score 
+from utilities.model import get_prediction
 from utilities.embedding import search_and_store_embeddings
+from utilities.Bart import predict_post_authenticity
 import os 
 
 app = Flask(__name__)
@@ -21,28 +22,62 @@ def misinfo_chatbot():
         user_query = data.get('query', '')
         conversation_history = data.get('conversation_history', '')
 
+
         if not post_content or not user_query:
             return jsonify({'error': 'Post content and user query are required.'}), 400
 
         response = get_response(post_title, post_content, user_query, conversation_history)
+        print(response)
         return jsonify({'response': response})
 
     except Exception as e:
+        print("exception")
+        print(e)
         return jsonify({'error': str(e)}), 500
       
-@app.route('/predict_score', methods=['POST'])
-def predict_score():
+@app.route('/predict', methods=['POST'])
+def predict():
     try:
+
         data = request.get_json()
         post_title = data.get('post_title', '')
         post_content = data.get('post_content', '')
-        input_text= post_title+ " "+ post_content
+        input_text = post_title + " " + post_content
 
-        if not input_text:
+        if not input_text.strip():
             return jsonify({'error': 'Text input is required for prediction.'}), 400
 
-        score = get_prediction_score(input_text)  
-        return jsonify({'prediction_score': score})
+        label, probabilities = get_prediction(input_text)
+        
+        return jsonify({
+            'predicted_label': label,
+            'probabilities': {
+                'class_0': probabilities[0],
+                'class_1': probabilities[1]
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/predictBART', methods=['POST'])
+def predictBART():
+    try:
+        # Get the input data from the request
+        data = request.get_json()
+        post_title = data.get('post_title', '')
+        post_content = data.get('post_content', '')
+
+        if not post_title.strip() and not post_content.strip():
+            return jsonify({'error': 'Post title and content are required for prediction.'}), 400
+
+        # Call the prediction function
+        result = predict_post_authenticity(post_title, post_content)
+
+        if 'error' in result:
+            return jsonify(result), 404
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
